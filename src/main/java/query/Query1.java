@@ -97,7 +97,7 @@ public class Query1 {
         }
 
         try {
-            TimeUnit.MINUTES.sleep(5);
+            TimeUnit.MINUTES.sleep(2);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
