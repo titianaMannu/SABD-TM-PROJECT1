@@ -4,9 +4,9 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class VaccinationCenter implements Serializable {
-    private String areaCode;
-    private String areaName;
-    private String name;
+    private final String areaCode;
+    private final String areaName;
+    private final String name;
     private CentreType type;
 
 
@@ -16,27 +16,6 @@ public class VaccinationCenter implements Serializable {
         this.name = name;
         this.type = type;
 
-    }
-
-    public void setType(CentreType type) {
-
-        this.type = type;
-    }
-
-    public String getAreaCode() {
-        return areaCode;
-    }
-
-    public String getAreaName() {
-        return areaName;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public CentreType getType() {
-        return type;
     }
 
     public static VaccinationCenter parse(String csvLine) {
@@ -56,6 +35,28 @@ public class VaccinationCenter implements Serializable {
 
 
     }
+
+    public String getAreaCode() {
+        return areaCode;
+    }
+
+    public String getAreaName() {
+        return areaName;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public CentreType getType() {
+        return type;
+    }
+
+    public void setType(CentreType type) {
+
+        this.type = type;
+    }
+
     @Override
     public String toString() {
         return "VaccinationCenter{" +
