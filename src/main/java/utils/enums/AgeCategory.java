@@ -1,4 +1,4 @@
-package utils;
+package utils.enums;
 
 public enum AgeCategory {
     _1619, _2029, _3039, _4049, _5059, _6069, _7079, _8089, _90;

@@ -1,6 +1,6 @@
-package utils;
+package utils.enums;
 
-enum CentreType {
+public enum CentreType {
     HOSPITAL, TERRITORIAL;
 
     public static CentreType value(String str) throws IllegalArgumentException {

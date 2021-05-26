@@ -1,4 +1,4 @@
-package utils;
+package utils.comparators;
 
 
 import scala.Tuple2;

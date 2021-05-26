@@ -4,36 +4,43 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import scala.Tuple2;
 import scala.Tuple3;
+import utils.ExporterToCSV;
+import utils.beans.SomministrationSummary;
+import utils.beans.VaccinationCenter;
+import utils.comparators.Tuple3Comparator;
+import utils.enums.Constants;
 
-import utils.SomministrationSummary;
-import utils.VaccinationCenter;
-
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+
 import static org.apache.commons.math3.util.Precision.round;
 
 
 public class Query1 {
-    private final static String pathToFile = "data/punti-somministrazione-tipologia.csv";
-    private final static String pathToFile2 = "data/somministrazioni-vaccini-summary-latest.csv";
+    private final static String pathToFile = Constants.PATHQ1_CENTRI.getString();
+    private final static String pathToFile2 = Constants.PATHQ1_SUMMARY.getString();
+    private boolean isDebugMode;
+    private long lastExecutionTime = 0;
 
-    public static void main(String[] args) {
+    public Query1(boolean isDebugMode) {
+        this.isDebugMode = isDebugMode;
+    }
 
-        SparkConf conf = new SparkConf()
-                .setMaster("local")
-                .setAppName("VaccinationQuery");
-        JavaSparkContext sc = new JavaSparkContext(conf);
-        sc.setLogLevel("ERROR");
+    public long getLastExecutionTime() {
+        return lastExecutionTime;
+    }
 
-        
+    public void executeQuery(JavaSparkContext sc) {
+        Instant start = Instant.now();
         JavaRDD<String> textFile = sc.textFile(pathToFile);
         JavaRDD<VaccinationCenter> vaccinationCenterJavaRDD = textFile.map(line -> VaccinationCenter.parse(line)); //.distinct();
 
@@ -45,10 +52,14 @@ public class Query1 {
         JavaPairRDD<String, Tuple2<Integer, String>> summaryCentrePerArea = centrePerArea.reduceByKey(
                 (x, y) -> new Tuple2<>(x._1() + y._1(), x._2()));
 
-        //for debug ... show intermediary results
-        List<Tuple2<String, Tuple2<Integer, String>>> results = summaryCentrePerArea.collect();
-        for (Tuple2<String, Tuple2<Integer, String>> o : results) {
-            System.out.println(o);
+
+        if (isDebugMode) {
+            System.out.println("**************************** Vaccination centre per area ***************************");
+            //for debug ... show intermediary results
+            List<Tuple2<String, Tuple2<Integer, String>>> results = summaryCentrePerArea.collect();
+            for (Tuple2<String, Tuple2<Integer, String>> o : results) {
+                System.out.println(o);
+            }
         }
 
         //second part ------------------------------------------------------------
@@ -77,41 +88,72 @@ public class Query1 {
         JavaPairRDD<String, Tuple2<Tuple3<YearMonth, Integer, Integer>,
                 Tuple2<Integer, String>>> joined = MonthVaccinationsDaysPerArea.join(summaryCentrePerArea);
 
-        List<Tuple2<String, Tuple2<Tuple3<YearMonth, Integer, Integer>,
-                Tuple2<Integer, String>>>> finalList = joined.collect();
+        if (isDebugMode) {
+            System.out.println("**************************** Area_code, <Month, vaccinations, vaccination_days>, <total_centre, area_name> ***************************");
+            List<Tuple2<String, Tuple2<Tuple3<YearMonth, Integer, Integer>,
+                    Tuple2<Integer, String>>>> finalList = joined.collect();
 
-        for (Tuple2<String, Tuple2<Tuple3<YearMonth, Integer, Integer>,
-                Tuple2<Integer, String>>> x :
-                finalList) {
-            System.out.println(x);
+            for (Tuple2<String, Tuple2<Tuple3<YearMonth, Integer, Integer>,
+                    Tuple2<Integer, String>>> x :
+                    finalList) {
+                System.out.println(x);
+            }
         }
 
 
-        JavaRDD<Tuple3<String, YearMonth, Double>> average = joined.map(x ->
-                new Tuple3<>(
-                        x._2._2._2(), //Area NAME
-                        x._2._1._1(), // Month
-                        // VaccinationOfMonth / (vaccination_DAYS * vaccination_CENTRE)
-                        round(x._2._1._2() / Double.valueOf(x._2._1._3() * x._2._2._1()), 3)
+        JavaPairRDD<javaslang.Tuple3<YearMonth, String, Double>, Integer> average = joined.mapToPair(x ->
+                new Tuple2<>(
+                        new javaslang.Tuple3<>(
+                                x._2._1._1(), // Month
+                                x._2._2._2(), //Area NAME
+                                // VaccinationOfMonth / (vaccination_DAYS * vaccination_CENTRE)
+                                round(x._2._1._2() / (double) (x._2._1._3() * x._2._2._1()), 3)),
+                        1 //need for sorting later on
                 ));
 
+        //sorting
+        average = average.sortByKey(new Tuple3Comparator(), true);
 
-        List<Tuple3<String, YearMonth, Double>> ff = average.collect();
-        for (Tuple3<String, YearMonth, Double> elem : ff) {
-            System.out.println(elem);
+
+        if (isDebugMode) {
+            List<Tuple2<javaslang.Tuple3<YearMonth, String, Double>, Integer>> ff = average.collect();
+            for (Tuple2<javaslang.Tuple3<YearMonth, String, Double>, Integer> elem : ff) {
+                System.out.println(elem._1());
+            }
         }
 
-        JavaRDD<Row> rowRDD = average.map(tuple -> RowFactory.create(tuple._1(),tuple._2(), tuple._3()));
+        JavaRDD<Row> rowRDD = average.map(tuple -> RowFactory.create(tuple._1._1().toString(), tuple._1._2(), tuple._1._3().toString()));
+        // The schema is encoded in a string
+        String schemaString = Constants.Q1_SCHEMA.getString();
+        ExporterToCSV exporterToCSV = new ExporterToCSV(schemaString, Constants.OUTPUT_PATH_Q1.getString());
+        exporterToCSV.generateCSV(sc, rowRDD);
 
-        /*try {
-            TimeUnit.MINUTES.sleep(2);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+
+        Instant end = Instant.now();
+        this.lastExecutionTime = Duration.between(start, end).toMillis();
+
+        if (isDebugMode) {
+            try {
+                TimeUnit.MINUTES.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-*/
 
-        sc.stop();
     }
 
 
+    public static void main(String[] args) {
+
+        SparkConf conf = new SparkConf()
+                .setMaster(Constants.MASTER_URL.getString())
+                .setAppName("VaccinationQuery1");
+        JavaSparkContext sc = new JavaSparkContext(conf);
+        sc.setLogLevel("ERROR");
+        Query1 q1 = new Query1(false);
+        q1.executeQuery(sc);
+        System.out.println("execution time for query 2: " + q1.getLastExecutionTime());
+
+        sc.stop();
+    }
 }

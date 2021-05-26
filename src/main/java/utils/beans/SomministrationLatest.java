@@ -1,4 +1,6 @@
-package utils;
+package utils.beans;
+
+import utils.enums.AgeCategory;
 
 import java.io.Serializable;
 import java.time.LocalDate;

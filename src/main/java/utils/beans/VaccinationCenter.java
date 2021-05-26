@@ -1,4 +1,6 @@
-package utils;
+package utils.beans;
+
+import utils.enums.CentreType;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -7,7 +9,7 @@ public class VaccinationCenter implements Serializable {
     private final String areaCode;
     private final String areaName;
     private final String name;
-    private CentreType type;
+    private  CentreType type;
 
 
     public VaccinationCenter(String areaCode, String areaName, String name, CentreType type) {
