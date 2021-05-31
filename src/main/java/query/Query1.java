@@ -13,7 +13,7 @@ import scala.Tuple3;
 import utils.ExporterToCSV;
 import utils.beans.SomministrationSummary;
 import utils.beans.VaccinationCenter;
-import utils.comparators.Tuple3Comparator;
+import utils.comparators.TupleThreeComparator;
 import utils.enums.Constants;
 
 import java.time.Duration;
@@ -58,7 +58,6 @@ public class Query1 {
 
         if (isDebugMode) {
             log.warn("Vaccination centre per area");
-            //System.out.println("**************************** Vaccination centre per area ***************************");
             //for debug ... show intermediary results
             List<Tuple2<String, Tuple2<Integer, String>>> results = summaryCentrePerArea.collect();
             for (Tuple2<String, Tuple2<Integer, String>> o : results) {
@@ -94,7 +93,6 @@ public class Query1 {
 
         if (isDebugMode) {
             log.warn("Area_code, <Month, vaccinations, vaccination_days>, <total_centre, area_name>");
-     //       System.out.println("**************************** Area_code, <Month, vaccinations, vaccination_days>, <total_centre, area_name> ***************************");
             List<Tuple2<String, Tuple2<Tuple3<YearMonth, Integer, Integer>,
                     Tuple2<Integer, String>>>> finalList = joined.collect();
 
@@ -117,7 +115,7 @@ public class Query1 {
                 ));
 
         //sorting
-        average = average.sortByKey(new Tuple3Comparator(), true);
+        average = average.sortByKey(new TupleThreeComparator(), true);
 
 
         if (isDebugMode) {
@@ -134,7 +132,7 @@ public class Query1 {
         String schemaString = Constants.Q1_SCHEMA.getString();
         //export query result on hdfs
         log.warn("exporting results on hdfs");
-        String hdfsURL = Constants.HDFS_MASTER.getString() +  Constants.OUTPUT_PATH_Q1.getString();
+        String hdfsURL = Constants.HDFS_MASTER.getString() + Constants.OUTPUT_PATH_Q1.getString();
         ExporterToCSV exporterToCSV = new ExporterToCSV(schemaString, hdfsURL);
         exporterToCSV.generateCSV(sc, rowRDD);
 
@@ -149,7 +147,7 @@ public class Query1 {
         exporterToCSV.generateCSV(sc, rowRDD);
 
 
-       if (isDebugMode) {
+        if (isDebugMode) {
             try {
                 log.warn("DEBUG-MODE SLEEPING FOR 2 MINUTES... CHECK WEB GUI:: PORT:4040");
                 TimeUnit.MINUTES.sleep(2);
@@ -171,7 +169,7 @@ public class Query1 {
         sc.setLogLevel(LogLevel.WARN.toString());
         Query1 q1 = new Query1(useDebugMode);
         q1.executeQuery(sc);
-        System.out.println("execution time for query 1: " +q1.getLastExecutionTime() + " ms");
+        System.out.println("execution time for query 1: " + q1.getLastExecutionTime() + " ms");
 
         sc.stop();
     }

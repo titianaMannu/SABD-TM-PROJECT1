@@ -17,8 +17,8 @@ import scala.Tuple4;
 import utils.ExporterToCSV;
 import utils.MyIterable;
 import utils.beans.SomministrationLatest;
-import utils.comparators.Tuple2Comparator;
-import utils.comparators.Tuple3Comparator;
+import utils.comparators.TupleTwoComparator;
+import utils.comparators.TupleThreeComparator;
 import utils.enums.AgeCategory;
 import utils.enums.Constants;
 
@@ -87,16 +87,16 @@ public class Query2 {
                         new MyIterable(new Tuple2<>(x._1._2(), x._2._2()))
                 )).reduceByKey(MyIterable::addAll) //pattern to perform a groupByKey
                 .mapValues(x -> {
-                    x.descendingSort(new Tuple2Comparator()); // sorting
+                    x.descendingSort(new TupleTwoComparator()); // sorting
                     x.sublist(0, 5); // take range [0:4]
                     return x;
                 });
 
 
-        if (isDebugMode){
+        if (isDebugMode) {
             log.warn("predicted top5 value list");
             List<Tuple2<Tuple2<LocalDate, AgeCategory>, MyIterable>> dateAndAgePairResult = dateAndAgePair.collect();
-            for (Tuple2<Tuple2<LocalDate, AgeCategory>, MyIterable> elem : dateAndAgePairResult){
+            for (Tuple2<Tuple2<LocalDate, AgeCategory>, MyIterable> elem : dateAndAgePairResult) {
                 System.out.println(elem);
             }
         }
@@ -115,12 +115,11 @@ public class Query2 {
         });
 
         //sorting output
-        resultsTuple = resultsTuple.sortByKey(new Tuple3Comparator(), true);
+        resultsTuple = resultsTuple.sortByKey(new TupleThreeComparator(), true);
 
         JavaRDD<Tuple4<LocalDate, AgeCategory, String, Double>> results = resultsTuple.map(in ->
                 new Tuple4<>(
                         in._1._1(), in._1._2(), in._2(), in._1._3()));
-
 
 
         // action to materialize transformations
@@ -137,7 +136,7 @@ public class Query2 {
         String schemaString = Constants.Q2_SCHEMA.getString();
         //export query result on hdfs
         log.warn("exporting results on hdfs");
-        String hdfsURL = Constants.HDFS_MASTER.getString() +  Constants.OUTPUT_PATH_Q2.getString();
+        String hdfsURL = Constants.HDFS_MASTER.getString() + Constants.OUTPUT_PATH_Q2.getString();
         ExporterToCSV exporterToCSV = new ExporterToCSV(schemaString, hdfsURL);
         exporterToCSV.generateCSV(sc, rowRDD);
 
@@ -149,7 +148,7 @@ public class Query2 {
         exporterToCSV.setOutputFolder(Constants.OUTPUT_PATH_Q2.getString());
         exporterToCSV.generateCSV(sc, rowRDD);
 
-        if (isDebugMode){
+        if (isDebugMode) {
             try {
                 TimeUnit.MINUTES.sleep(2);
             } catch (InterruptedException e) {
