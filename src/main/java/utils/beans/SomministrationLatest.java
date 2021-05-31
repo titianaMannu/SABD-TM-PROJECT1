@@ -49,7 +49,7 @@ public class SomministrationLatest implements Serializable {
                 '}';
     }
 
-    public static SomministrationLatest CSVParser(String csvLine) {
+    public static SomministrationLatest parse(String csvLine) {
         SomministrationLatest summary = null;
         if (csvLine == null)
             return null;
@@ -59,7 +59,7 @@ public class SomministrationLatest implements Serializable {
                     csvValues[0],
                     Integer.valueOf(csvValues[5]),
                     AgeCategory.toEnum(csvValues[3]),
-                    csvValues[21]
+                    csvValues[11]
             );
         }catch (DateTimeParseException | NumberFormatException e){
             return  null;

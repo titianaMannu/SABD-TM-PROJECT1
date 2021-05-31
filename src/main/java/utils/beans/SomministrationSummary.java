@@ -32,7 +32,7 @@ public class SomministrationSummary implements Serializable {
         return total;
     }
 
-    public static SomministrationSummary CSVParser(String csvLine) {
+    public static SomministrationSummary parse(String csvLine) {
         SomministrationSummary summary = null;
         if (csvLine == null)
             return null;

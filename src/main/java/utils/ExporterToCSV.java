@@ -14,10 +14,14 @@ import java.util.List;
 
 public class ExporterToCSV {
     private final String schema;
-    private final String outputFolder;
+    private  String outputFolder;
 
     public ExporterToCSV(String schema, String outputFolder) {
         this.schema = schema;
+        this.outputFolder = outputFolder;
+    }
+
+    public void setOutputFolder(String outputFolder) {
         this.outputFolder = outputFolder;
     }
 
@@ -32,9 +36,11 @@ public class ExporterToCSV {
         // Apply the schema to the RDD.
         Dataset<Row> peopleDataFrame = sqlContext.createDataFrame(rowRDD, schema);
         peopleDataFrame.coalesce(1).write()
+                .format("csv")
                 .option("header", "true")
                 .option("sep", ",")
                 .mode("overwrite")
-                .csv(this.outputFolder);
+                .save(this.outputFolder);
+                //.csv(this.outputFolder);
     }
 }

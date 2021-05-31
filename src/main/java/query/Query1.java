@@ -1,11 +1,13 @@
 package query;
 
+import org.apache.log4j.lf5.LogLevel;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.slf4j.Logger;
 import scala.Tuple2;
 import scala.Tuple3;
 import utils.ExporterToCSV;
@@ -28,7 +30,7 @@ import static org.apache.commons.math3.util.Precision.round;
 public class Query1 {
     private final static String pathToFile = Constants.PATHQ1_CENTRI.getString();
     private final static String pathToFile2 = Constants.PATHQ1_SUMMARY.getString();
-    private boolean isDebugMode;
+    private final boolean isDebugMode;
     private long lastExecutionTime = 0;
 
     public Query1(boolean isDebugMode) {
@@ -40,6 +42,7 @@ public class Query1 {
     }
 
     public void executeQuery(JavaSparkContext sc) {
+        Logger log = sc.sc().log();
         Instant start = Instant.now();
         JavaRDD<String> textFile = sc.textFile(pathToFile);
         JavaRDD<VaccinationCenter> vaccinationCenterJavaRDD = textFile.map(line -> VaccinationCenter.parse(line)); //.distinct();
@@ -54,7 +57,8 @@ public class Query1 {
 
 
         if (isDebugMode) {
-            System.out.println("**************************** Vaccination centre per area ***************************");
+            log.warn("Vaccination centre per area");
+            //System.out.println("**************************** Vaccination centre per area ***************************");
             //for debug ... show intermediary results
             List<Tuple2<String, Tuple2<Integer, String>>> results = summaryCentrePerArea.collect();
             for (Tuple2<String, Tuple2<Integer, String>> o : results) {
@@ -65,7 +69,7 @@ public class Query1 {
         //second part ------------------------------------------------------------
 
         JavaRDD<String> textFile2 = sc.textFile(pathToFile2);
-        JavaRDD<SomministrationSummary> somministrationSummaryJavaRDD = textFile2.map(line -> SomministrationSummary.CSVParser(line))
+        JavaRDD<SomministrationSummary> somministrationSummaryJavaRDD = textFile2.map(line -> SomministrationSummary.parse(line))
                 .filter(obj -> obj != null && obj.getSomministrationDate().isAfter(LocalDate.parse("2020-12-31")));
 
         // obtain how many vaccinations and how many active days in terms of vaccination per Area and Month
@@ -89,7 +93,8 @@ public class Query1 {
                 Tuple2<Integer, String>>> joined = MonthVaccinationsDaysPerArea.join(summaryCentrePerArea);
 
         if (isDebugMode) {
-            System.out.println("**************************** Area_code, <Month, vaccinations, vaccination_days>, <total_centre, area_name> ***************************");
+            log.warn("Area_code, <Month, vaccinations, vaccination_days>, <total_centre, area_name>");
+     //       System.out.println("**************************** Area_code, <Month, vaccinations, vaccination_days>, <total_centre, area_name> ***************************");
             List<Tuple2<String, Tuple2<Tuple3<YearMonth, Integer, Integer>,
                     Tuple2<Integer, String>>>> finalList = joined.collect();
 
@@ -116,24 +121,37 @@ public class Query1 {
 
 
         if (isDebugMode) {
+            log.warn("Collected Results");
             List<Tuple2<javaslang.Tuple3<YearMonth, String, Double>, Integer>> ff = average.collect();
             for (Tuple2<javaslang.Tuple3<YearMonth, String, Double>, Integer> elem : ff) {
                 System.out.println(elem._1());
             }
         }
 
+
         JavaRDD<Row> rowRDD = average.map(tuple -> RowFactory.create(tuple._1._1().toString(), tuple._1._2(), tuple._1._3().toString()));
         // The schema is encoded in a string
         String schemaString = Constants.Q1_SCHEMA.getString();
-        ExporterToCSV exporterToCSV = new ExporterToCSV(schemaString, Constants.OUTPUT_PATH_Q1.getString());
+        //export query result on hdfs
+        log.warn("exporting results on hdfs");
+        String hdfsURL = Constants.HDFS_MASTER.getString() +  Constants.OUTPUT_PATH_Q1.getString();
+        ExporterToCSV exporterToCSV = new ExporterToCSV(schemaString, hdfsURL);
         exporterToCSV.generateCSV(sc, rowRDD);
 
 
+        //computation done and results is exported on hdfs
         Instant end = Instant.now();
         this.lastExecutionTime = Duration.between(start, end).toMillis();
 
-        if (isDebugMode) {
+        //export query result locally
+        log.warn("exporting results Locally.. see:" + Constants.OUTPUT_PATH_Q1.getString());
+        exporterToCSV.setOutputFolder(Constants.OUTPUT_PATH_Q1.getString());
+        exporterToCSV.generateCSV(sc, rowRDD);
+
+
+       if (isDebugMode) {
             try {
+                log.warn("DEBUG-MODE SLEEPING FOR 2 MINUTES... CHECK WEB GUI:: PORT:4040");
                 TimeUnit.MINUTES.sleep(2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -144,15 +162,16 @@ public class Query1 {
 
 
     public static void main(String[] args) {
-
+        boolean useDebugMode;
+        useDebugMode = args.length > 0 && args[0].equals("-D");
         SparkConf conf = new SparkConf()
-                .setMaster(Constants.MASTER_URL.getString())
-                .setAppName("VaccinationQuery1");
+                .setMaster(Constants.SPARK_MASTER.getString())
+                .setAppName(Constants.PROJECT_NAME.getString());
         JavaSparkContext sc = new JavaSparkContext(conf);
-        sc.setLogLevel("ERROR");
-        Query1 q1 = new Query1(false);
+        sc.setLogLevel(LogLevel.WARN.toString());
+        Query1 q1 = new Query1(useDebugMode);
         q1.executeQuery(sc);
-        System.out.println("execution time for query 2: " + q1.getLastExecutionTime());
+        System.out.println("execution time for query 1: " +q1.getLastExecutionTime() + " ms");
 
         sc.stop();
     }

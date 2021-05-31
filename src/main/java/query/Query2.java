@@ -2,6 +2,7 @@ package query;
 
 
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.apache.log4j.lf5.LogLevel;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -9,6 +10,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.slf4j.Logger;
 import scala.Tuple2;
 import scala.Tuple3;
 import scala.Tuple4;
@@ -20,7 +22,6 @@ import utils.comparators.Tuple3Comparator;
 import utils.enums.AgeCategory;
 import utils.enums.Constants;
 
-import java.sql.SQLOutput;
 import java.time.*;
 import java.util.ArrayList;
 import java.util.Date;
@@ -31,7 +32,7 @@ import static java.lang.Math.abs;
 import static org.apache.commons.math3.util.Precision.round;
 
 public class Query2 {
-    private boolean isDebugMode = false;
+    private boolean isDebugMode;
     private long lastExecutionTime = 0;
     private final static String pathToFile = Constants.PATHQ2_LATEST.getString();
 
@@ -40,10 +41,11 @@ public class Query2 {
     }
 
     public void executeQuery(JavaSparkContext sc) {
+        Logger log = sc.sc().log();
         Instant start = Instant.now();
 
         JavaRDD<String> textFile = sc.textFile(pathToFile);
-        JavaRDD<SomministrationLatest> VaccinationLatest = textFile.map(SomministrationLatest::CSVParser)
+        JavaRDD<SomministrationLatest> VaccinationLatest = textFile.map(SomministrationLatest::parse)
                 .filter(obj -> obj != null && obj.getDate().isAfter(LocalDate.parse("2021-01-31")) && obj.getAgeCategory() != null && obj.getFemale_vaccination() > 0);
 
         //we have multiple lines with same date, area, and age_category but different vaccination brand -> total per day is the sum of them
@@ -55,7 +57,7 @@ public class Query2 {
 
 
         // <(month, region, age), MyIterable -> List[(complete_date, female_vaccinations)]>
-        //use of custom Iterable to implements custom functions and a serializable Object
+        //use of custom Iterable to implements custom functions and a serializable List
         JavaPairRDD<Tuple3<YearMonth, String, AgeCategory>, MyIterable> vaccinationPerMonthAreaCategory = VaccinationPerDayAndAreaAndCategory
                 .mapToPair(
                         v -> new Tuple2<>(
@@ -91,6 +93,14 @@ public class Query2 {
                 });
 
 
+        if (isDebugMode){
+            log.warn("predicted top5 value list");
+            List<Tuple2<Tuple2<LocalDate, AgeCategory>, MyIterable>> dateAndAgePairResult = dateAndAgePair.collect();
+            for (Tuple2<Tuple2<LocalDate, AgeCategory>, MyIterable> elem : dateAndAgePairResult){
+                System.out.println(elem);
+            }
+        }
+
         // prototype : ((2021-03-01, _2029, predictedVal), Region)
         JavaPairRDD<javaslang.Tuple3<LocalDate, AgeCategory, Double>, String> resultsTuple = dateAndAgePair.flatMapToPair(in -> {
             List<Tuple2<javaslang.Tuple3<LocalDate, AgeCategory, Double>, String>> myList = new ArrayList<>();
@@ -116,6 +126,7 @@ public class Query2 {
         // action to materialize transformations
         List<Tuple4<LocalDate, AgeCategory, String, Double>> myList = results.collect();
         if (this.isDebugMode) {
+            log.warn("results");
             for (Object o : myList) {
                 System.out.println(o);
             }
@@ -124,11 +135,19 @@ public class Query2 {
         JavaRDD<Row> rowRDD = results.map(tuple -> RowFactory.create(tuple._1().toString(), tuple._2().toString(), tuple._3(), tuple._4().toString()));
         // The schema is encoded in a string
         String schemaString = Constants.Q2_SCHEMA.getString();
-        ExporterToCSV exporterToCSV = new ExporterToCSV(schemaString, Constants.OUTPUT_PATH_Q2.getString());
+        //export query result on hdfs
+        log.warn("exporting results on hdfs");
+        String hdfsURL = Constants.HDFS_MASTER.getString() +  Constants.OUTPUT_PATH_Q2.getString();
+        ExporterToCSV exporterToCSV = new ExporterToCSV(schemaString, hdfsURL);
         exporterToCSV.generateCSV(sc, rowRDD);
 
         Instant end = Instant.now();
         this.lastExecutionTime = Duration.between(start, end).toMillis();
+
+        //export query result locally
+        log.warn("exporting results Locally.. see:" + Constants.OUTPUT_PATH_Q2.getString());
+        exporterToCSV.setOutputFolder(Constants.OUTPUT_PATH_Q2.getString());
+        exporterToCSV.generateCSV(sc, rowRDD);
 
         if (isDebugMode){
             try {
@@ -175,15 +194,17 @@ public class Query2 {
     }
 
     public static void main(String[] args) {
+        boolean useDebugMode;
+        useDebugMode = args.length > 0 && args[0].equals("-D");
         SparkConf conf = new SparkConf()
-                .setMaster(Constants.MASTER_URL.getString())
-                .setAppName("VaccinationQuery2");
+                .setMaster(Constants.SPARK_MASTER.getString())
+                .setAppName(Constants.PROJECT_NAME.getString());
         JavaSparkContext sc = new JavaSparkContext(conf);
-        sc.setLogLevel("ERROR");
+        sc.setLogLevel(LogLevel.WARN.toString());
 
-        Query2 q2 = new Query2(false);
+        Query2 q2 = new Query2(useDebugMode);
         q2.executeQuery(sc);
-        System.out.println("execution time for query 2: " + q2.getExecutionTime());
+        System.out.println("execution time for query 2: " + q2.getExecutionTime() + " ms");
         sc.stop();
     }
 
