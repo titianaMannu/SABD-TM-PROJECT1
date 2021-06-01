@@ -12,4 +12,17 @@ public enum AgeCategory {
             return null;
         }
     }
+
+    @Override
+    public String toString() {
+        String str = this.name();
+        if (this.name().equals("_90")){
+            str = str.replace("_", "") + "+";
+        }
+        else{
+           str =  str.substring(1, 3) + "-" + str.substring(3);
+        }
+        return str;
+    }
+
 }
