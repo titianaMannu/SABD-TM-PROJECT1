@@ -151,6 +151,7 @@ public class Query2 {
 
         if (isDebugMode) {
             try {
+                log.warn("DEBUG-MODE SLEEPING FOR 2 MINUTES... CHECK WEB GUI");
                 TimeUnit.MINUTES.sleep(2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
