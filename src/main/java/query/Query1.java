@@ -141,20 +141,20 @@ public class Query1 {
         Instant end = Instant.now();
         this.lastExecutionTime = Duration.between(start, end).toMillis();
 
-     /*   //export query result locally
+        //export query result locally
         log.warn("exporting results Locally.. see:" + Constants.OUTPUT_PATH_Q1.getString());
         exporterToCSV.setOutputFolder(Constants.OUTPUT_PATH_Q1.getString());
         exporterToCSV.generateCSV(sc, rowRDD);
-*/
 
-       // if (isDebugMode) {
+
+        if (isDebugMode) {
             try {
                 log.warn("DEBUG-MODE SLEEPING FOR 2 MINUTES... CHECK WEB GUI:: PORT:4040");
                 TimeUnit.MINUTES.sleep(2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        //}
+        }
 
     }
 
