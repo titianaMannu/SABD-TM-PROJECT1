@@ -45,7 +45,7 @@ public class Query1 {
         Logger log = sc.sc().log();
         Instant start = Instant.now();
         JavaRDD<String> textFile = sc.textFile(pathToFile);
-        JavaRDD<VaccinationCenter> vaccinationCenterJavaRDD = textFile.map(line -> VaccinationCenter.parse(line)); //.distinct();
+        JavaRDD<VaccinationCenter> vaccinationCenterJavaRDD = textFile.map(line -> VaccinationCenter.parse(line)).distinct();
 
         // to obtain (area_code, (1, area_name)) we will use area_name later
         JavaPairRDD<String, Tuple2<Integer, String>> centrePerArea = vaccinationCenterJavaRDD.mapToPair(point ->
@@ -141,20 +141,20 @@ public class Query1 {
         Instant end = Instant.now();
         this.lastExecutionTime = Duration.between(start, end).toMillis();
 
-        //export query result locally
+     /*   //export query result locally
         log.warn("exporting results Locally.. see:" + Constants.OUTPUT_PATH_Q1.getString());
         exporterToCSV.setOutputFolder(Constants.OUTPUT_PATH_Q1.getString());
         exporterToCSV.generateCSV(sc, rowRDD);
+*/
 
-
-        if (isDebugMode) {
+       // if (isDebugMode) {
             try {
                 log.warn("DEBUG-MODE SLEEPING FOR 2 MINUTES... CHECK WEB GUI:: PORT:4040");
                 TimeUnit.MINUTES.sleep(2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
+        //}
 
     }
 

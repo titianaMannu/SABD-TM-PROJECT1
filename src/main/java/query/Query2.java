@@ -65,7 +65,7 @@ public class Query2 {
                                 new MyIterable(new Tuple2<>(v._1._1(), v._2()))
                         )
                 ).reduceByKey(MyIterable::addAll) // pattern to avoid groupByKey and reduce shuffled data
-                .filter(o -> o._2().getList().size() > 1);  // delete instances with just one day of vaccinations
+                .filter(o -> o._2().getList().size() > 1);  //  filter cases which have more than 1 observation
 
 
         // do predictions on the total vaccinations (females) based on the data of the previous month in a specific region and age
@@ -123,8 +123,9 @@ public class Query2 {
 
 
         // action to materialize transformations
-        List<Tuple4<LocalDate, AgeCategory, String, Double>> myList = results.collect();
+
         if (this.isDebugMode) {
+            List<Tuple4<LocalDate, AgeCategory, String, Double>> myList = results.collect();
             log.warn("results");
             for (Object o : myList) {
                 System.out.println(o);
@@ -178,7 +179,7 @@ public class Query2 {
             for (Object item : myIterable.getList()) {
                 Tuple2<LocalDate, Integer> t = (Tuple2<LocalDate, Integer>) item;
                 Date date = Date.from(t._1().atStartOfDay(ZoneId.systemDefault()).toInstant());
-                R.addData(date.getTime(), (double) t._2()); //add points to the Regression Object
+                R.addData(date.getTime(), (double) t._2()); //add points as (x, y) coordinates to the Regression Object
             }
 
             Tuple2<LocalDate, Integer> elem = (Tuple2<LocalDate, Integer>) myIterable.getList().get(0);
@@ -187,6 +188,7 @@ public class Query2 {
             Date dateToPredict = Date.from(d.atStartOfDay(ZoneId.systemDefault()).toInstant());
             double xToPredict = (double) dateToPredict.getTime();
 
+            //return <1st-day-of-month, predicted val>
             return new Tuple2<>(d, round(abs(R.predict(xToPredict)), 3));
 
         }
