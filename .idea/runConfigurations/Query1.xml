@@ -3,6 +3,7 @@
     <option name="INCLUDE_PROVIDED_SCOPE" value="true" />
     <option name="MAIN_CLASS_NAME" value="query.Query1" />
     <module name="SABD-Project_1" />
+    <option name="PROGRAM_PARAMETERS" value="-D" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
