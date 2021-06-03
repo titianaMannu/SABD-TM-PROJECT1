@@ -1,4 +1,4 @@
-/home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/comparators/Tuple3Comparator.java
+/home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/comparators/TupleThreeComparator.java
 /home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/enums/AgeCategory.java
 /home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/query/Query2.java
 /home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/ExporterToCSV.java
@@ -9,5 +9,5 @@
 /home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/MyIterable.java
 /home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/beans/VaccinationCenter.java
 /home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/enums/Constants.java
+/home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/comparators/TupleTwoComparator.java
 /home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/query/Query1.java
-/home/tiziana/IdeaProjects/SABD-Project_1/src/main/java/utils/comparators/Tuple2Comparator.java

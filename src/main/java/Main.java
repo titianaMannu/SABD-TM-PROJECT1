@@ -29,10 +29,13 @@ public class Main {
         log.warn("execution time for query 2: " + q2.getExecutionTime() + " ms");
         log.warn("see output in: " + Constants.OUTPUT_PATH_Q2.getString());
 
-        try {
-            TimeUnit.MINUTES.sleep(2);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        if (useDebugMode) {
+            try {
+                log.warn("DEBUG-MODE SLEEPING FOR 2 MINUTES... CHECK WEB GUI");
+                TimeUnit.MINUTES.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
         sc.stop();

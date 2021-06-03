@@ -34,7 +34,7 @@ import static org.apache.commons.math3.util.Precision.round;
 public class Query2 {
     private boolean isDebugMode;
     private long lastExecutionTime = 0;
-    private final static String pathToFile = Constants.PATHQ2_LATEST.getString();
+    private final static String pathToFile =  Constants.PATHQ2_LATEST.getString();
 
     public Query2(boolean isDebugMode) {
         this.isDebugMode = isDebugMode;
@@ -64,7 +64,7 @@ public class Query2 {
                                 new Tuple3<>(YearMonth.from(v._1._1()), v._1._2(), v._1._3()),
                                 new MyIterable(new Tuple2<>(v._1._1(), v._2()))
                         )
-                ).reduceByKey(MyIterable::addAll) // pattern to avoid groupByKey and reduce shuffled data
+                ).reduceByKey(MyIterable::addAll) // pattern to avoid groupByKey and to reduce shuffled data
                 .filter(o -> o._2().getList().size() > 1);  //  filter cases which have more than 1 observation
 
 
@@ -76,7 +76,7 @@ public class Query2 {
         /*
          * First of all perform groupByKey using a pattern map + reduceByKey.
          * I have grouped on month and category to obtain a list of tuple2<region, predicted_val>
-         * After executes sort operation in a mapValues. Sorting operation is pretty fast because every list has size <= 21 elements
+         * After execute sort operation in a mapValues. Sorting operation is pretty fast because every list has size <= 22 elements
          * one per Italian region.
          * Final use Sublist to keep the topN elements, with N=5.
          * <(firstDayOfMonth, AgeCategory), List[(Region, predicted_vaccinations]>
